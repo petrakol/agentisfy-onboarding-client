@@ -1,3 +1,5 @@
+import type { AgentPaymentManifest, DiscrepancyResponse, EventEnvelope, ExecuteResponse, SettlementProof, SimulationResponse } from "./types";
+
 export const demoGrant = {
   grantId: "grant_demo_public_1",
   grantVersion: "1.0",
@@ -22,3 +24,62 @@ export const demoGrant = {
   revocationState: "active",
   riskTier: "low"
 } as const;
+
+export function buildDemoManifest(invoiceId: string): AgentPaymentManifest {
+  return {
+    invoiceId,
+    amount: { atomic: "2500000", symbol: "USDT0", decimals: 6 },
+    payee: "merchant_demo_public",
+    chainId: 988,
+    target: "0x000000000000000000000000000000000000f333",
+    selector: "0xa9059cbb",
+    createdAt: new Date().toISOString(),
+    mode: "demo-fallback"
+  };
+}
+
+export function buildDemoSimulation(invoiceId: string): SimulationResponse {
+  return {
+    predictedPath: "waiver",
+    policy: { decision: "allow", reason: "Demo fallback mode" },
+    capability: { maxAtomic: "100000000", invoiceId },
+    budget: { remainingAtomic: "97500000" }
+  };
+}
+
+export function buildDemoExecution(invoiceId: string): ExecuteResponse {
+  return {
+    attemptId: `demo_attempt_${invoiceId}_${Date.now()}`,
+    status: "accepted",
+    policy: { decision: "allow" },
+    capability: { mode: "demo-fallback" },
+    reservation: { status: "reserved", holdAtomic: "2500000" }
+  };
+}
+
+export function buildDemoProof(invoiceId: string, attemptId?: string): SettlementProof {
+  return {
+    invoiceId,
+    attemptId: attemptId ?? `demo_attempt_${invoiceId}`,
+    settlementState: "settled",
+    txHash: "0xd3m0f411b4ck0000000000000000000000000000000000000000000000000001",
+    settledAt: new Date().toISOString(),
+    mode: "demo-fallback"
+  };
+}
+
+export function buildDemoDiscrepancies(): DiscrepancyResponse {
+  return {
+    items: [],
+    summary: { open: 0, closed: 0 },
+    mode: "demo-fallback"
+  };
+}
+
+export function buildDemoEvents(attemptId: string): EventEnvelope[] {
+  return [
+    { type: "execution.accepted", attemptId, at: new Date().toISOString(), mode: "demo-fallback" },
+    { type: "reservation.confirmed", attemptId, at: new Date().toISOString(), mode: "demo-fallback" },
+    { type: "settlement.completed", attemptId, at: new Date().toISOString(), mode: "demo-fallback" }
+  ];
+}

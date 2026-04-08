@@ -42,6 +42,12 @@ npm install
 npm run dev
 ```
 
+
+## Automatic fallback behavior
+- If the configured gateway is unreachable, the client automatically switches to demo fallback mode by default.
+- This keeps onboarding unblocked while still showing the full manifest → simulate → execute → proof loop.
+- To disable fallback and fail fast, set `VITE_AGENTISFY_AUTO_DEMO_FALLBACK=false` in `.env`.
+
 ## Expected gateway endpoints
 - `GET /v1/agent/manifest/:invoiceId`
 - `POST /v1/agent/simulate`
