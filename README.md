@@ -16,7 +16,14 @@ It is intentionally minimal. It teaches engineers how Agentisfy is consumed **as
 3. Execute with a published grant + preflight token from the private gateway
 4. Stream execution events
 5. Fetch `SettlementProof`
-6. Read `DiscrepancyRecord` consequences
+6. Verify the proof client-side (required fields, evidence structure, and manifest-hash consistency)
+7. Read `DiscrepancyRecord` consequences
+
+
+## Client-side proof verifier
+- `src/lib/proofVerifier.ts` provides a lightweight verifier suitable for public consumers.
+- The verifier validates required proof fields, checks that `logRefs` evidence is present, and confirms `manifestHash` matches the locally loaded manifest.
+- It returns either `{ ok: true }` or `{ ok: false, errors: ProofValidationError[] }` without requiring private control-plane state.
 
 ## What must stay private
 - grant issuance / approval / revocation workflows

@@ -1,3 +1,4 @@
+import { computeManifestHash } from "./proofVerifier";
 import type { AgentPaymentManifest, DiscrepancyResponse, EventEnvelope, ExecuteResponse, SettlementProof, SimulationResponse } from "./types";
 
 export const demoGrant = {
@@ -33,7 +34,7 @@ export function buildDemoManifest(invoiceId: string): AgentPaymentManifest {
     chainId: 988,
     target: "0x000000000000000000000000000000000000f333",
     selector: "0xa9059cbb",
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-01-15T00:00:00.000Z",
     mode: "demo-fallback"
   };
 }
@@ -57,13 +58,25 @@ export function buildDemoExecution(invoiceId: string): ExecuteResponse {
   };
 }
 
-export function buildDemoProof(invoiceId: string, attemptId?: string): SettlementProof {
+export async function buildDemoProof(invoiceId: string, attemptId?: string): Promise<SettlementProof> {
+  const manifest = buildDemoManifest(invoiceId);
   return {
-    invoiceId,
-    attemptId: attemptId ?? `demo_attempt_${invoiceId}`,
-    settlementState: "settled",
+    proofId: `proof_${invoiceId}`,
+    schemaVersion: "1.0",
+    runId: `run_${invoiceId}`,
+    runVersion: "1.0",
+    manifestHash: await computeManifestHash(manifest),
+    grantRef: demoGrant.grantId,
+    route: "waiver",
+    attemptRef: attemptId ?? `demo_attempt_${invoiceId}`,
     txHash: "0xd3m0f411b4ck0000000000000000000000000000000000000000000000000001",
-    settledAt: new Date().toISOString(),
+    chainId: 988,
+    blockNumber: 123456,
+    receiptStatus: "success",
+    logRefs: ["txReceipt:0", "transferLog:0"],
+    verifiedFinalAt: new Date().toISOString(),
+    issuedAt: new Date().toISOString(),
+    environment: "sandbox",
     mode: "demo-fallback"
   };
 }
