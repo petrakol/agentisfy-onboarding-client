@@ -1,74 +1,105 @@
-# Agentisfy public onboarding client
+# Agentisfy Public Onboarding Client
 
-This is the **public repo** that should be exposed.
+**The fastest way to understand and integrate Agentisfy: www.agentisfy.com**
 
-It is intentionally minimal. It teaches engineers how Agentisfy is consumed **as an end user / integrator** while keeping the private decision engine out of the open.
+This repository is the public onboarding surface for Agentisfy. It is built for engineers, product teams, solution architects, and technical evaluators who want to understand how Agentisfy is consumed from the outside.
 
-## What this repo includes
-- a small React/Vite onboarding client
-- the public schema bundle copied from the internal monorepo
-- a tiny API wrapper for public gateway endpoints
-- boundary docs that explain what stays private
+If you want to see the Agentisfy flow end to end, start here:
 
-## What this repo does
-1. Fetch a canonical `AgentPaymentManifest`
-2. Run `simulate`
-3. Execute with a published grant + preflight token from the private gateway
-4. Stream execution events
-5. Fetch `SettlementProof`
-6. Verify the proof client-side (required fields, evidence structure, and manifest-hash consistency)
-7. Read `DiscrepancyRecord` consequences
+**Manifest → Simulate → Execute → Verify**
 
+---
 
-## Client-side proof verifier
-- `src/lib/proofVerifier.ts` provides a lightweight verifier suitable for public consumers.
-- The verifier validates required proof fields, checks that `logRefs` evidence is present, and confirms `manifestHash` matches the locally loaded manifest.
-- It returns either `{ ok: true }` or `{ ok: false, errors: ProofValidationError[] }` without requiring private control-plane state.
+## What this repo is
 
-## What must stay private
-- grant issuance / approval / revocation workflows
-- policy evaluation rules and risk scoring
-- route heuristics and waiver/fallback arbitration
-- reservation / capture / release logic
-- discrepancy closure and reconciliation truth
-- merchant and ops internal consoles
+This repo is a minimal public client that demonstrates how an integrator or end user interacts with Agentisfy through the public gateway.
 
-## Why this is the right public repo
-The engineer only needs the public consequences:
-- schemas
-- public gateway calls
-- sample app
-- event / proof / discrepancy inspection
+It is intentionally small.
 
-The engineer does **not** need the private control plane internals.
+It shows:
+- how to fetch a canonical payment manifest
+- how to simulate a governed payment
+- how to execute with a published grant and a preflight token
+- how to stream execution events
+- how to load a settlement proof
+- how to inspect discrepancies when a run does not close cleanly
 
-## Local run
+It does **not** expose internal control-plane logic.
+
+---
+
+## Who this repo is for
+
+Use this repo if you are:
+
+- evaluating Agentisfy for your product or platform
+- integrating Agentisfy into an app, workflow, or agent stack
+- onboarding an engineer to the Agentisfy model
+- validating schemas and public gateway behavior
+- learning how public consequences map to the Agentisfy operating model
+
+---
+
+## What you can do in this repo
+
+With this client, you can:
+
+1. enter an invoice ID
+2. fetch the canonical `AgentPaymentManifest`
+3. review or paste a published `PolicyGrant`
+4. simulate the execution path and expected budget shape
+5. execute using a preflight token from the private gateway
+6. watch execution events stream in real time
+7. load the resulting `SettlementProof`
+8. inspect `DiscrepancyRecord` output when applicable
+9. replay a prior attempt safely
+
+This is the public learning loop for Agentisfy.
+
+---
+
+## What you will learn
+
+This repo teaches the core Agentisfy lifecycle:
+
+- **Intent** is expressed as an `AgentPaymentManifest`
+- **Authority** is expressed as a `PolicyGrant`
+- **Execution** is tracked as an `ExecutionRun`
+- **Events** are exposed through public envelopes and event streams
+- **Verification** is expressed as `SettlementProof`
+- **Exceptions** are surfaced as `DiscrepancyRecord`
+
+If you understand this repo, you understand how Agentisfy is consumed publicly.
+
+---
+
+## What stays private
+
+This repository is **not** the private control plane.
+
+The following remain private by design:
+
+- grant issuance, approval, and revocation workflows
+- policy authoring and policy evaluation logic
+- risk scoring and decision heuristics
+- routing logic and waiver/fallback arbitration
+- reservation, capture, and release logic
+- discrepancy closure workflows
+- reconciliation truth and finance closeout logic
+- internal merchant, operator, and ops dashboards
+
+### Principle
+
+**Public repo = consequences**  
+**Private repo = decisions**
+
+That boundary is intentional.
+
+---
+
+## Quick start
+
+### 1. Copy environment variables
+
 ```bash
 cp .env.example .env
-npm install
-npm run dev
-```
-
-
-## Automatic fallback behavior
-- If the configured gateway is unreachable, the client automatically switches to demo fallback mode by default.
-- This keeps onboarding unblocked while still showing the full manifest → simulate → execute → proof loop.
-- To disable fallback and fail fast, set `VITE_AGENTISFY_AUTO_DEMO_FALLBACK=false` in `.env`.
-
-## Expected gateway endpoints
-- `GET /v1/agent/manifest/:invoiceId`
-- `POST /v1/agent/simulate`
-- `POST /v1/agent/execute`
-- `POST /v1/agent/attempts/:attemptId/replay`
-- `GET /v1/agent/proof/:invoiceId`
-- `GET /v1/agent/events`
-- `GET /v1/agent/discrepancies`
-
-## Catch-up strategy
-This public repo should never become the source of truth.
-The private repo should publish release artifacts for:
-- JSON schemas
-- public OpenAPI subset
-- SDK types / fixtures
-
-Then CI in this public repo should fail if those artifacts drift.
