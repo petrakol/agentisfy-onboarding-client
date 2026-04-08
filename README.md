@@ -186,6 +186,18 @@ If yes → this repo did its job.
 
 ---
 
+
+## Public contribution guardrails
+
+Before opening a PR, verify this repo still only exposes **public consequences** and not private decision systems.
+
+- Guardrails and checklist: `docs/PUBLIC_BOUNDARY_GUARDRAILS.md`
+- Public API examples: `docs/API_COOKBOOK.md`
+- Release artifact hashes/version pin: `docs/public-release-artifacts.json`
+- Contract change protocol: `docs/PUBLIC_CONTRACT_CHANGE_PROTOCOL.md`
+- Release note template: `docs/RELEASE_NOTE_TEMPLATE.md`
+
+---
 ## Summary
 
 Stable is the rail.  

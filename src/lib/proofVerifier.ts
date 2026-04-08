@@ -4,6 +4,7 @@ import type {
   ProofVerificationResult,
   SettlementProof
 } from "./types";
+import { normalizeHash } from "./contracts";
 
 const REQUIRED_STRING_FIELDS: Array<keyof SettlementProof> = [
   "proofId",
@@ -55,12 +56,6 @@ export async function computeManifestHash(manifest: AgentPaymentManifest): Promi
   return `sha256:${hex}`;
 }
 
-function normalizeHash(value: string): string {
-  const lowerValue = value.trim().toLowerCase();
-  if (lowerValue.startsWith("sha256:")) return lowerValue;
-  if (lowerValue.startsWith("0x")) return `sha256:${lowerValue.slice(2)}`;
-  return `sha256:${lowerValue}`;
-}
 
 function isIsoDateTime(value: string): boolean {
   const epoch = Date.parse(value);

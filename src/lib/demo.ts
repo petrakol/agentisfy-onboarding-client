@@ -1,7 +1,17 @@
 import { computeManifestHash } from "./proofVerifier";
-import type { AgentPaymentManifest, DiscrepancyResponse, EventEnvelope, ExecuteResponse, SettlementProof, SimulationResponse } from "./types";
+import type {
+  AgentPaymentManifest,
+  DiscrepancyResponse,
+  EventEnvelope,
+  ExecuteResponse,
+  PolicyGrant,
+  SettlementProof,
+  SimulationResponse
+} from "./types";
 
-export const demoGrant = {
+const DEMO_NOW = "2026-01-15T00:00:00.000Z";
+
+export const demoGrant: PolicyGrant = {
   grantId: "grant_demo_public_1",
   grantVersion: "1.0",
   principalType: "merchant",
@@ -10,7 +20,7 @@ export const demoGrant = {
   delegateId: "agent_demo_public",
   environment: "sandbox",
   merchantScope: ["merchant_demo_public"],
-  payeeScope: ["*"],
+  payeeScope: ["payee_demo_public"],
   targetScope: ["0x000000000000000000000000000000000000f333"],
   selectorScope: ["0x095ea7b3", "0xa9059cbb"],
   asset: {
@@ -24,37 +34,48 @@ export const demoGrant = {
   approvalState: "published",
   revocationState: "active",
   riskTier: "low"
-} as const;
+};
 
 export function buildDemoManifest(invoiceId: string): AgentPaymentManifest {
   return {
-    invoiceId,
-    amount: { atomic: "2500000", symbol: "USDT0", decimals: 6 },
-    payee: "merchant_demo_public",
-    chainId: 988,
+    manifestId: `manifest_${invoiceId}`,
+    schemaVersion: "1.0",
+    manifestHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    origin: "agent",
+    invoiceRef: invoiceId,
+    merchantRef: "merchant_demo_public",
+    payer: { accountRef: "acct_payer_demo", chainId: 988 },
+    payee: { accountRef: "acct_payee_demo", chainId: 988 },
+    asset: { symbol: "USDT0", tokenAddress: "0x0000000000000000000000000000000000000000", chainId: 988 },
+    amount: { atomic: "2500000", decimals: 6 },
     target: "0x000000000000000000000000000000000000f333",
     selector: "0xa9059cbb",
-    createdAt: "2026-01-15T00:00:00.000Z",
-    mode: "demo-fallback"
+    calldataHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    idempotencyKey: `public_client_execute_${invoiceId}_1700000000000`,
+    expiresAt: "2027-01-01T00:00:00.000Z",
+    fallbackPolicy: { mode: "fallback", maxAttempts: 2 },
+    proofRequirement: { requireProof: true, maxFinalityBlocks: 10 },
+    metadata: { mode: "demo-fallback" }
   };
 }
 
 export function buildDemoSimulation(invoiceId: string): SimulationResponse {
   return {
     predictedPath: "waiver",
-    policy: { decision: "allow", reason: "Demo fallback mode" },
-    capability: { maxAtomic: "100000000", invoiceId },
-    budget: { remainingAtomic: "97500000" }
+    policy: { decision: "allow", reasonCodes: ["demo.fallback", "policy.pass"] },
+    capability: { maxAtomic: "100000000", expiry: "2027-01-01T00:00:00.000Z", idempotencyScope: invoiceId },
+    budget: { requestedAtomic: "2500000", remainingAtomic: "97500000" }
   };
 }
 
 export function buildDemoExecution(invoiceId: string): ExecuteResponse {
   return {
-    attemptId: `demo_attempt_${invoiceId}_${Date.now()}`,
+    attemptId: `demo_attempt_${invoiceId}_1700000000000`,
     status: "accepted",
-    policy: { decision: "allow" },
+    policy: { decision: "allow", reasonCodes: ["demo.fallback"] },
     capability: { mode: "demo-fallback" },
-    reservation: { status: "reserved", holdAtomic: "2500000" }
+    reservation: { status: "reserved", holdAtomic: "2500000" },
+    budget: { requestedAtomic: "2500000", remainingAtomic: "97500000" }
   };
 }
 
@@ -74,25 +95,73 @@ export async function buildDemoProof(invoiceId: string, attemptId?: string): Pro
     blockNumber: 123456,
     receiptStatus: "success",
     logRefs: ["txReceipt:0", "transferLog:0"],
-    verifiedFinalAt: new Date().toISOString(),
-    issuedAt: new Date().toISOString(),
-    environment: "sandbox",
-    mode: "demo-fallback"
+    verifiedFinalAt: DEMO_NOW,
+    issuedAt: DEMO_NOW,
+    environment: "sandbox"
+  };
+}
+
+export function buildBrokenProofFixtures(invoiceId: string) {
+  return {
+    malformed: { schemaVersion: "1.0" },
+    hashMismatch: {
+      ...buildDemoManifest(invoiceId),
+      manifestHash: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    expiredPreflightToken: {
+      code: "PRECONDITION_FAILED",
+      message: "Preflight token expired"
+    }
   };
 }
 
 export function buildDemoDiscrepancies(): DiscrepancyResponse {
   return {
-    items: [],
-    summary: { open: 0, closed: 0 },
+    items: [
+      {
+        discrepancyId: "disc_demo_1",
+        schemaVersion: "1.0",
+        runId: "run_inv_10231",
+        kind: "missing_proof",
+        severity: "low",
+        openedAt: DEMO_NOW,
+        ownerQueue: "ops",
+        suspectedImpact: "No settlement proof yet",
+        closureRequirements: ["wait_finality", "refresh_proof"]
+      }
+    ],
+    summary: { open: 1, closed: 0 },
     mode: "demo-fallback"
   };
 }
 
 export function buildDemoEvents(attemptId: string): EventEnvelope[] {
   return [
-    { type: "execution.accepted", attemptId, at: new Date().toISOString(), mode: "demo-fallback" },
-    { type: "reservation.confirmed", attemptId, at: new Date().toISOString(), mode: "demo-fallback" },
-    { type: "settlement.completed", attemptId, at: new Date().toISOString(), mode: "demo-fallback" }
+    {
+      eventId: `${attemptId}:1`,
+      eventType: "run.started",
+      eventVersion: "2.0",
+      occurredAt: DEMO_NOW,
+      environment: "sandbox",
+      runId: `run_${attemptId}`,
+      actorKind: "agent",
+      sourceKind: "control_plane",
+      correlationIds: { invoiceId: "inv_10231", attemptId },
+      sequenceNo: 1,
+      payload: { status: "accepted" }
+    },
+    {
+      eventId: `${attemptId}:2`,
+      eventType: "waiver.accepted",
+      eventVersion: "2.0",
+      occurredAt: DEMO_NOW,
+      environment: "sandbox",
+      runId: `run_${attemptId}`,
+      actorKind: "executor",
+      sourceKind: "stable_rail",
+      correlationIds: { invoiceId: "inv_10231", attemptId },
+      sequenceNo: 2,
+      payload: { reservation: "confirmed" }
+    }
   ];
 }
