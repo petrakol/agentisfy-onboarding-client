@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { demoGrant } from "./lib/demo";
 import { execute, fetchDiscrepancies, fetchManifest, fetchProof, getBaseUrl, getTransportMode, isAutoDemoFallbackEnabled, openEventStream, replayAttempt, simulate } from "./lib/api";
+import { verifySettlementProof } from "./lib/proofVerifier";
+import type { ProofVerificationResult } from "./lib/types";
 
 function JsonPanel({ title, value }: { title: string; value: unknown }) {
   return (
@@ -18,6 +20,7 @@ export function App() {
   const [simulation, setSimulation] = useState<unknown>(null);
   const [execution, setExecution] = useState<unknown>(null);
   const [proof, setProof] = useState<unknown>(null);
+  const [proofVerification, setProofVerification] = useState<ProofVerificationResult | null>(null);
   const [discrepancies, setDiscrepancies] = useState<unknown>(null);
   const [events, setEvents] = useState<unknown[]>([]);
   const [preflightToken, setPreflightToken] = useState("replace-with-preflight-token-from-private-gateway");
@@ -89,9 +92,14 @@ export function App() {
   async function loadProof() {
     setError(null);
     try {
+      const currentManifest = manifest ?? await fetchManifest(invoiceId);
+      if (!manifest) setManifest(currentManifest);
+
       const attemptId = typeof execution === "object" && execution && "attemptId" in execution ? String((execution as { attemptId?: string }).attemptId ?? "") : undefined;
       const next = await fetchProof(invoiceId, attemptId || undefined);
       setProof(next);
+      const verification = await verifySettlementProof(next, currentManifest as Record<string, unknown>);
+      setProofVerification(verification);
       setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
@@ -181,7 +189,8 @@ export function App() {
           <JsonPanel title="Manifest" value={manifest} />
           <JsonPanel title="Simulation" value={simulation} />
           <JsonPanel title="Execution" value={execution} />
-          <JsonPanel title="SettlementProof" value={proof} />
+          <JsonPanel title={`SettlementProof ${proofVerification?.ok ? "(trusted)" : proofVerification ? "(untrusted)" : ""}`} value={proof} />
+          <JsonPanel title="Proof verification" value={proofVerification} />
           <JsonPanel title="Discrepancies" value={discrepancies} />
           <JsonPanel title="Event stream" value={events} />
         </section>

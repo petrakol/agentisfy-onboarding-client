@@ -38,13 +38,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function withDemoFallback<T>(operation: () => Promise<T>, fallback: () => T): Promise<T> {
+async function withDemoFallback<T>(operation: () => Promise<T>, fallback: () => T | Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (error) {
     if (!autoDemoFallback || !isNetworkError(error)) throw error;
     transportMode = "demo-fallback";
-    return fallback();
+    return await fallback();
   }
 }
 
