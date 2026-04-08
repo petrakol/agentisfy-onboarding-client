@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { demoGrant } from "./lib/demo";
-import { execute, fetchDiscrepancies, fetchManifest, fetchProof, getBaseUrl, openEventStream, replayAttempt, simulate } from "./lib/api";
+import { execute, fetchDiscrepancies, fetchManifest, fetchProof, getBaseUrl, getTransportMode, isAutoDemoFallbackEnabled, openEventStream, replayAttempt, simulate } from "./lib/api";
 
 function JsonPanel({ title, value }: { title: string; value: unknown }) {
   return (
@@ -22,7 +22,8 @@ export function App() {
   const [events, setEvents] = useState<unknown[]>([]);
   const [preflightToken, setPreflightToken] = useState("replace-with-preflight-token-from-private-gateway");
   const [error, setError] = useState<string | null>(null);
-  const streamRef = useRef<EventSource | null>(null);
+  const [transport, setTransport] = useState<"gateway" | "demo-fallback">(getTransportMode());
+  const streamRef = useRef<{ close: () => void } | null>(null);
 
   const grant = useMemo(() => {
     try {
@@ -43,8 +44,10 @@ export function App() {
     try {
       const next = await fetchManifest(invoiceId);
       setManifest(next);
+      setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -55,8 +58,10 @@ export function App() {
       if (!manifest) setManifest(currentManifest);
       const next = await simulate(currentManifest as Record<string, unknown>, grant as Record<string, unknown>);
       setSimulation(next);
+      setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -68,6 +73,7 @@ export function App() {
       const idempotencyKey = `public_client_${Date.now()}`;
       const next = await execute(currentManifest as Record<string, unknown>, grant as Record<string, unknown>, preflightToken, idempotencyKey);
       setExecution(next);
+      setTransport(getTransportMode());
       const attemptId = typeof next === "object" && next && "attemptId" in next ? String((next as { attemptId?: string }).attemptId ?? "") : "";
       if (attemptId) {
         streamRef.current?.close();
@@ -76,6 +82,7 @@ export function App() {
       }
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -85,8 +92,10 @@ export function App() {
       const attemptId = typeof execution === "object" && execution && "attemptId" in execution ? String((execution as { attemptId?: string }).attemptId ?? "") : undefined;
       const next = await fetchProof(invoiceId, attemptId || undefined);
       setProof(next);
+      setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -95,8 +104,10 @@ export function App() {
     try {
       const next = await fetchDiscrepancies();
       setDiscrepancies(next);
+      setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -107,8 +118,10 @@ export function App() {
       if (!attemptId) throw new Error("No attemptId available to replay.");
       const next = await replayAttempt(attemptId, `public_client_replay_${Date.now()}`);
       setExecution(next);
+      setTransport(getTransportMode());
     } catch (err) {
       setError(String(err));
+      setTransport(getTransportMode());
     }
   }
 
@@ -122,6 +135,8 @@ export function App() {
           risk logic, routing heuristics, reservation/capture rules, or reconciliation truth.
         </p>
         <div className="notice">Gateway base URL: <strong>{getBaseUrl()}</strong></div>
+        <div className="notice">Transport: <strong>{transport}</strong>{transport === "demo-fallback" ? " (automatic fallback active)" : ""}</div>
+        {isAutoDemoFallbackEnabled() ? <div className="notice">If the gateway is offline, this app auto-switches to demo fallback so onboarding can continue.</div> : null}
       </header>
 
       <div className="grid">
