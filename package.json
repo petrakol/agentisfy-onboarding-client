@@ -6,7 +6,20 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check:fixtures": "tsx scripts/check-fixtures.mjs",
+    "check:openapi": "node scripts/check-openapi.mjs",
+    "check": "npm run typecheck && npm run check:fixtures && npm run check:openapi && npm run check:release-sync && npm run check:examples && npm run check:cookbook && npm run check:negative && npm run check:boundary && npm run check:release-template",
+    "check:release-sync": "node scripts/check-release-sync.mjs",
+    "check:examples": "node scripts/check-example-versions.mjs",
+    "test:transport": "tsx scripts/test-transport-fallback.mjs",
+    "test:integration": "tsx scripts/test-integration-flow.mjs",
+    "test": "npm run test:transport && npm run test:integration",
+    "check:cookbook": "tsx scripts/check-cookbook-examples.mjs",
+    "check:negative": "tsx scripts/check-negative-matrix.mjs",
+    "check:boundary": "node scripts/check-boundary-lint.mjs",
+    "check:release-template": "node scripts/check-release-template.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -15,7 +28,12 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.21"
+  },
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "contractSetVersion": "2026-04-08",
+  "openapiVersion": "0.1.0",
+  "schemaFamilyVersion": "1.0",
+  "artifactHashes": {
+    "docs/public-openapi.yaml": "7dbf6602a571fbc32038466ed90d616ae6a579a03df2c82d7dd205b02b30f252",
+    "schemas/agent-payment-manifest-1.0.schema.json": "225fa9446101e883689267d0fb577db9123ca7df64cb33f0d46f3de6803d9669",
+    "schemas/decision-trace-1.0.schema.json": "010446e06edbeb230f5ba9e9538bd17aa10e4282b60ca0200d24f33ad9210aac",
+    "schemas/discrepancy-record-1.0.schema.json": "7ee50f5127a59611a1a7d81956ade456b7d4d6a84f1bf23e496f185500c02d1a",
+    "schemas/execution-event-envelope-2.0.schema.json": "58ac0234ecdfb18a77332b6bdf4eea9932cb315744a47c7ed00597dfcfe9daf7",
+    "schemas/execution-run-1.0.schema.json": "066b5ccc1f6b5160cafc73ea7fe462392c96ed475554ea76cc0da0da32bb06bd",
+    "schemas/payment-event-envelope-1.0.schema.json": "6b7ea3f0a884456c2fd06bef3131dad5a046a5858d9db33482db697777287f6b",
+    "schemas/policy-grant-1.0.schema.json": "28d80192aa80bd626ed35f4f00d425b7bef5b26b6e3dbc4e911af080d8aa5e36",
+    "schemas/settlement-proof-1.0.schema.json": "c1016c5c10c883aa62d0e21da0cf05243e911659870f299895156002339ae06b"
+  }
+}

@@ -1,20 +1,61 @@
-export type AgentPaymentManifest = Record<string, unknown>;
-export type PolicyGrant = Record<string, unknown>;
+export type Environment = "sandbox" | "testnet" | "mainnet";
+
+export type AgentPaymentManifest = {
+  manifestId: string;
+  schemaVersion: "1.0";
+  manifestHash: string;
+  origin: "checkout" | "api" | "agent" | "replay";
+  invoiceRef: string;
+  merchantRef: string;
+  payer: { accountRef: string; chainId?: number };
+  payee: { accountRef: string; chainId?: number };
+  asset: { symbol: string; tokenAddress: string; chainId: number };
+  amount: { atomic: string; decimals: number };
+  target: string;
+  selector: string;
+  calldataHash: string;
+  idempotencyKey: string;
+  expiresAt: string;
+  fallbackPolicy: { mode: "waiver" | "fallback" | "manual"; maxAttempts: number };
+  proofRequirement: { requireProof: boolean; maxFinalityBlocks?: number };
+  metadata: Record<string, unknown>;
+};
+
+export type PolicyGrant = {
+  grantId: string;
+  grantVersion: "1.0";
+  principalType: "merchant" | "organization" | "user" | "system";
+  principalId: string;
+  delegateType: "agent" | "operator" | "service";
+  delegateId: string;
+  environment: Environment;
+  merchantScope: string[];
+  payeeScope: string[];
+  targetScope: string[];
+  selectorScope: string[];
+  asset: { symbol: string; tokenAddress: string; chainId: number };
+  maxAmount: { atomic: string };
+  notBefore: string;
+  notAfter: string;
+  approvalState: "draft" | "published" | "archived";
+  revocationState: "active" | "revoked";
+  riskTier: "low" | "medium" | "high";
+};
 
 export type SimulationResponse = {
-  policy?: unknown;
-  capability?: unknown;
-  predictedPath?: "waiver" | "fallback" | "blocked" | "ambiguous";
-  budget?: unknown;
+  policy: { decision: "allow" | "deny" | "review"; reasonCodes: string[] };
+  capability: { maxAtomic: string; expiry: string; idempotencyScope: string };
+  predictedPath: "waiver" | "fallback" | "blocked" | "ambiguous";
+  budget: { requestedAtomic: string; remainingAtomic: string };
 };
 
 export type ExecuteResponse = {
-  attemptId?: string;
-  status?: string;
-  capability?: unknown;
-  policy?: unknown;
-  budget?: unknown;
-  reservation?: unknown;
+  attemptId: string;
+  status: "accepted" | "replayed" | "failed" | "ambiguous" | "settled";
+  capability: { mode: "gateway" | "demo-fallback" };
+  policy?: { decision: "allow" | "deny" | "review"; reasonCodes?: string[] };
+  budget?: { requestedAtomic?: string; remainingAtomic?: string };
+  reservation?: { status: string; holdAtomic: string };
   error?: { code?: string; message?: string };
 };
 
@@ -34,12 +75,66 @@ export type SettlementProof = {
   logRefs: string[];
   verifiedFinalAt: string;
   issuedAt: string;
-  environment: "sandbox" | "testnet" | "mainnet";
-  [key: string]: unknown;
+  environment: Environment;
 };
 
-export type DiscrepancyResponse = Record<string, unknown>;
-export type EventEnvelope = Record<string, unknown>;
+export type DiscrepancyRecord = {
+  discrepancyId: string;
+  schemaVersion: "1.0";
+  runId: string;
+  kind: "timeout" | "unknown_outcome" | "mismatch" | "duplicate_risk" | "missing_proof";
+  severity: "low" | "medium" | "high" | "critical";
+  openedAt: string;
+  ownerQueue: "ops" | "risk" | "engineering";
+  suspectedImpact: string;
+  closureRequirements: string[];
+  resolvedAt?: string;
+};
+
+export type DiscrepancyResponse = {
+  items: DiscrepancyRecord[];
+  summary: { open: number; closed: number };
+  mode?: "gateway" | "demo-fallback";
+};
+
+export type EventEnvelope = {
+  eventId: string;
+  eventType: string;
+  eventVersion: "2.0";
+  occurredAt: string;
+  environment: Environment;
+  runId: string;
+  actorKind: "agent" | "policy_engine" | "executor" | "webhook" | "operator";
+  sourceKind: "control_plane" | "stable_rail" | "merchant_system" | "risk_service";
+  correlationIds: { invoiceId: string; attemptId?: string; traceId?: string };
+  sequenceNo: number;
+  payload: Record<string, unknown>;
+};
+
+export type ApiErrorCode =
+  | "NETWORK_UNREACHABLE"
+  | "HTTP_ERROR"
+  | "INVALID_JSON"
+  | "SCHEMA_VALIDATION_FAILED"
+  | "PRECONDITION_FAILED";
+
+export class ApiError extends Error {
+  code: ApiErrorCode;
+  status?: number;
+  method?: string;
+  path?: string;
+  responseBody?: string;
+
+  constructor(params: { code: ApiErrorCode; message: string; status?: number; method?: string; path?: string; responseBody?: string }) {
+    super(params.message);
+    this.name = "ApiError";
+    this.code = params.code;
+    this.status = params.status;
+    this.method = params.method;
+    this.path = params.path;
+    this.responseBody = params.responseBody;
+  }
+}
 
 export type ProofValidationErrorCode =
   | "PROOF_NOT_OBJECT"

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { demoGrant } from "./lib/demo";
-import { execute, fetchDiscrepancies, fetchManifest, fetchProof, getBaseUrl, getTransportMode, isAutoDemoFallbackEnabled, openEventStream, replayAttempt, simulate } from "./lib/api";
+import { createIdempotencyKey, execute, fetchDiscrepancies, fetchManifest, fetchProof, formatApiError, getBaseUrl, getTransportMode, isAutoDemoFallbackEnabled, openEventStream, replayAttempt, simulate } from "./lib/api";
 import { verifySettlementProof } from "./lib/proofVerifier";
-import type { ProofVerificationResult } from "./lib/types";
+import type { AgentPaymentManifest, ExecuteResponse, PolicyGrant, ProofVerificationResult } from "./lib/types";
 
 function JsonPanel({ title, value }: { title: string; value: unknown }) {
   return (
@@ -15,16 +15,19 @@ function JsonPanel({ title, value }: { title: string; value: unknown }) {
 
 export function App() {
   const [invoiceId, setInvoiceId] = useState((import.meta.env.VITE_AGENTISFY_DEMO_INVOICE_ID as string | undefined) ?? "inv_10231");
-  const [manifest, setManifest] = useState<unknown>(null);
+  const [manifest, setManifest] = useState<AgentPaymentManifest | null>(null);
   const [grantJson, setGrantJson] = useState(JSON.stringify(demoGrant, null, 2));
   const [simulation, setSimulation] = useState<unknown>(null);
-  const [execution, setExecution] = useState<unknown>(null);
+  const [execution, setExecution] = useState<ExecuteResponse | null>(null);
   const [proof, setProof] = useState<unknown>(null);
   const [proofVerification, setProofVerification] = useState<ProofVerificationResult | null>(null);
+  const [proofState, setProofState] = useState<"idle" | "pending_finality" | "verified" | "invalid" | "unavailable">("idle");
   const [discrepancies, setDiscrepancies] = useState<unknown>(null);
+  const [discrepancySeverity, setDiscrepancySeverity] = useState("");
   const [events, setEvents] = useState<unknown[]>([]);
   const [preflightToken, setPreflightToken] = useState("replace-with-preflight-token-from-private-gateway");
   const [error, setError] = useState<string | null>(null);
+  const [lastIdempotencyKey, setLastIdempotencyKey] = useState<string | null>(null);
   const [transport, setTransport] = useState<"gateway" | "demo-fallback">(getTransportMode());
   const streamRef = useRef<{ close: () => void } | null>(null);
 
@@ -49,7 +52,7 @@ export function App() {
       setManifest(next);
       setTransport(getTransportMode());
     } catch (err) {
-      setError(String(err));
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
@@ -59,11 +62,11 @@ export function App() {
     try {
       const currentManifest = manifest ?? await fetchManifest(invoiceId);
       if (!manifest) setManifest(currentManifest);
-      const next = await simulate(currentManifest as Record<string, unknown>, grant as Record<string, unknown>);
+      const next = await simulate(currentManifest, grant as PolicyGrant);
       setSimulation(next);
       setTransport(getTransportMode());
     } catch (err) {
-      setError(String(err));
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
@@ -73,36 +76,45 @@ export function App() {
     try {
       const currentManifest = manifest ?? await fetchManifest(invoiceId);
       if (!manifest) setManifest(currentManifest);
-      const idempotencyKey = `public_client_${Date.now()}`;
-      const next = await execute(currentManifest as Record<string, unknown>, grant as Record<string, unknown>, preflightToken, idempotencyKey);
+      const idempotencyKey = createIdempotencyKey("execute", currentManifest.invoiceRef);
+      setLastIdempotencyKey(idempotencyKey);
+      const next = await execute(currentManifest, grant as PolicyGrant, preflightToken, idempotencyKey);
       setExecution(next);
       setTransport(getTransportMode());
-      const attemptId = typeof next === "object" && next && "attemptId" in next ? String((next as { attemptId?: string }).attemptId ?? "") : "";
+      const attemptId = next.attemptId ?? "";
       if (attemptId) {
         streamRef.current?.close();
         setEvents([]);
-        streamRef.current = openEventStream(attemptId, (event) => setEvents((current) => [...current, event]));
+        streamRef.current = openEventStream(
+          attemptId,
+          (event) => setEvents((current) => [...current, event]),
+          (streamError) => setError(formatApiError(streamError))
+        );
       }
     } catch (err) {
-      setError(String(err));
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
 
   async function loadProof() {
     setError(null);
+    setProofState("pending_finality");
     try {
       const currentManifest = manifest ?? await fetchManifest(invoiceId);
       if (!manifest) setManifest(currentManifest);
 
-      const attemptId = typeof execution === "object" && execution && "attemptId" in execution ? String((execution as { attemptId?: string }).attemptId ?? "") : undefined;
+      const attemptId = execution?.attemptId || undefined;
       const next = await fetchProof(invoiceId, attemptId || undefined);
       setProof(next);
-      const verification = await verifySettlementProof(next, currentManifest as Record<string, unknown>);
+      const verification = await verifySettlementProof(next, currentManifest);
       setProofVerification(verification);
+      if (verification.ok) setProofState("verified");
+      else setProofState("invalid");
       setTransport(getTransportMode());
     } catch (err) {
-      setError(String(err));
+      setProofState("unavailable");
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
@@ -110,11 +122,11 @@ export function App() {
   async function loadDiscrepancies() {
     setError(null);
     try {
-      const next = await fetchDiscrepancies();
+      const next = await fetchDiscrepancies({ invoiceId, severity: discrepancySeverity || undefined });
       setDiscrepancies(next);
       setTransport(getTransportMode());
     } catch (err) {
-      setError(String(err));
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
@@ -122,19 +134,21 @@ export function App() {
   async function replay() {
     setError(null);
     try {
-      const attemptId = typeof execution === "object" && execution && "attemptId" in execution ? String((execution as { attemptId?: string }).attemptId ?? "") : "";
+      const attemptId = execution?.attemptId ?? "";
       if (!attemptId) throw new Error("No attemptId available to replay.");
-      const next = await replayAttempt(attemptId, `public_client_replay_${Date.now()}`);
+      const idempotencyKey = createIdempotencyKey("replay", attemptId);
+      setLastIdempotencyKey(idempotencyKey);
+      const next = await replayAttempt(attemptId, idempotencyKey, execution?.status);
       setExecution(next);
       setTransport(getTransportMode());
     } catch (err) {
-      setError(String(err));
+      setError(formatApiError(err));
       setTransport(getTransportMode());
     }
   }
 
   return (
-    <main>
+    <main aria-label="Agentisfy public onboarding app">
       <header className="hero">
         <div className="label">Agentisfy public onboarding client</div>
         <h1>Manifest → simulate → execute → proof</h1>
@@ -151,19 +165,23 @@ export function App() {
         <aside className="stack">
           <section className="panel stack">
             <div className="label">1. Identify the invoice</div>
-            <input value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} />
+            <label htmlFor="invoice-id-input" className="label">Invoice ID</label>
+            <input id="invoice-id-input" aria-describedby="invoice-help" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} onKeyDown={(e) => e.key === "Enter" ? loadManifest() : undefined} />
+            <div id="invoice-help" className="notice">Use a canonical invoice reference.</div>
             <button onClick={loadManifest}>Fetch manifest</button>
           </section>
 
           <section className="panel stack">
             <div className="label">2. Published / demo grant</div>
-            <textarea rows={14} value={grantJson} onChange={(e) => setGrantJson(e.target.value)} />
+            <label htmlFor="grant-json-input" className="label">Grant JSON</label>
+            <textarea id="grant-json-input" aria-label="Published grant JSON" rows={14} value={grantJson} onChange={(e) => setGrantJson(e.target.value)} />
           </section>
 
           <section className="panel stack">
             <div className="label">3. Preflight token</div>
-            <input value={preflightToken} onChange={(e) => setPreflightToken(e.target.value)} />
-            <div className="notice">Keep grant authoring private. The public client consumes a published grant and a preflight token from the private gateway.</div>
+            <label htmlFor="preflight-token-input" className="label">Preflight token</label>
+            <input id="preflight-token-input" aria-describedby="preflight-help" value={preflightToken} onChange={(e) => setPreflightToken(e.target.value)} onKeyDown={(e) => e.key === "Enter" ? runExecution() : undefined} />
+            <div id="preflight-help" className="notice">Keep grant authoring private. The public client consumes a published grant and a preflight token from the private gateway.</div>
           </section>
 
           <section className="panel stack">
@@ -173,9 +191,11 @@ export function App() {
               <button onClick={runExecution}>Execute</button>
               <button className="secondary" onClick={loadProof}>Load proof</button>
               <button className="secondary" onClick={loadDiscrepancies}>Discrepancies</button>
+              <input aria-label="Discrepancy severity filter" placeholder="severity" value={discrepancySeverity} onChange={(e) => setDiscrepancySeverity(e.target.value)} />
               <button className="secondary" onClick={replay}>Replay</button>
             </div>
-            {error ? <div className="notice">Error: {error}</div> : null}
+            {lastIdempotencyKey ? <div className="notice" role="status" aria-live="polite">Last idempotency key: {lastIdempotencyKey}</div> : null}
+            {error ? <div className="notice" role="alert" aria-live="assertive">Error: {error}</div> : null}
           </section>
         </aside>
 
@@ -189,6 +209,7 @@ export function App() {
           <JsonPanel title="Manifest" value={manifest} />
           <JsonPanel title="Simulation" value={simulation} />
           <JsonPanel title="Execution" value={execution} />
+          <div className="notice" role="status" aria-live="polite">Proof state: {proofState}</div>
           <JsonPanel title={`SettlementProof ${proofVerification?.ok ? "(trusted)" : proofVerification ? "(untrusted)" : ""}`} value={proof} />
           <JsonPanel title="Proof verification" value={proofVerification} />
           <JsonPanel title="Discrepancies" value={discrepancies} />
