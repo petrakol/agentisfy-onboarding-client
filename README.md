@@ -1,105 +1,196 @@
-# Agentisfy Public Onboarding Client
+# Agentisfy — Public Client
+www.agentisfy.com
 
-**The fastest way to understand and integrate Agentisfy: www.agentisfy.com**
-
-This repository is the public onboarding surface for Agentisfy. It is built for engineers, product teams, solution architects, and technical evaluators who want to understand how Agentisfy is consumed from the outside.
-
-If you want to see the Agentisfy flow end to end, start here:
-
-**Manifest → Simulate → Execute → Verify**
+> Governed money execution for agents on Stable  
+> **Manifest → Simulate → Execute → Verify**
 
 ---
 
-## What this repo is
+## Why this exists
 
-This repo is a minimal public client that demonstrates how an integrator or end user interacts with Agentisfy through the public gateway.
+As agents begin to handle real spend (invoices, renewals, ops), the problem shifts from *sending a payment* to **executing it safely**.
 
-It is intentionally small.
+Stable provides the right rail:
+- **USDT0 as both gas and value**
+- **Gas Waiver** for approved flows (gasless UX)
+- **Deterministic fees** (no priority-tip noise)
 
-It shows:
-- how to fetch a canonical payment manifest
-- how to simulate a governed payment
-- how to execute with a published grant and a preflight token
-- how to stream execution events
-- how to load a settlement proof
-- how to inspect discrepancies when a run does not close cleanly
+Agentisfy turns that rail into an operating system for money:
+- policy-bound authority
+- deterministic execution paths
+- proof-backed outcomes
+- finance-ready closeout
 
-It does **not** expose internal control-plane logic.
-
----
-
-## Who this repo is for
-
-Use this repo if you are:
-
-- evaluating Agentisfy for your product or platform
-- integrating Agentisfy into an app, workflow, or agent stack
-- onboarding an engineer to the Agentisfy model
-- validating schemas and public gateway behavior
-- learning how public consequences map to the Agentisfy operating model
+This repo is the **public, minimal client** that shows how to use it.
 
 ---
 
-## What you can do in this repo
+## What you can do (in 5 minutes)
 
-With this client, you can:
+1. **Load a Manifest**  
+   Fetch a canonical `AgentPaymentManifest` from an invoice
 
-1. enter an invoice ID
-2. fetch the canonical `AgentPaymentManifest`
-3. review or paste a published `PolicyGrant`
-4. simulate the execution path and expected budget shape
-5. execute using a preflight token from the private gateway
-6. watch execution events stream in real time
-7. load the resulting `SettlementProof`
-8. inspect `DiscrepancyRecord` output when applicable
-9. replay a prior attempt safely
+2. **Simulate**  
+   See the execution path and budget before anything moves
 
-This is the public learning loop for Agentisfy.
+3. **Execute**  
+   Submit a governed run using a preflight token
 
----
+4. **Watch Events**  
+   Stream execution in real time
 
-## What you will learn
+5. **Verify**  
+   Load `SettlementProof` for the final outcome
 
-This repo teaches the core Agentisfy lifecycle:
-
-- **Intent** is expressed as an `AgentPaymentManifest`
-- **Authority** is expressed as a `PolicyGrant`
-- **Execution** is tracked as an `ExecutionRun`
-- **Events** are exposed through public envelopes and event streams
-- **Verification** is expressed as `SettlementProof`
-- **Exceptions** are surfaced as `DiscrepancyRecord`
-
-If you understand this repo, you understand how Agentisfy is consumed publicly.
+6. **Handle Exceptions**  
+   Inspect `DiscrepancyRecord` when a run can’t close cleanly
 
 ---
 
-## What stays private
-
-This repository is **not** the private control plane.
-
-The following remain private by design:
-
-- grant issuance, approval, and revocation workflows
-- policy authoring and policy evaluation logic
-- risk scoring and decision heuristics
-- routing logic and waiver/fallback arbitration
-- reservation, capture, and release logic
-- discrepancy closure workflows
-- reconciliation truth and finance closeout logic
-- internal merchant, operator, and ops dashboards
-
-### Principle
-
-**Public repo = consequences**  
-**Private repo = decisions**
-
-That boundary is intentional.
-
----
-
-## Quick start
-
-### 1. Copy environment variables
+## Quickstart
 
 ```bash
+npm install
 cp .env.example .env
+npm run dev
+```
+
+Open: http://localhost:5173
+
+### .env
+```env
+VITE_AGENTISFY_GATEWAY_BASE_URL=http://localhost:4010
+VITE_AGENTISFY_DEMO_INVOICE_ID=inv_10231
+```
+
+---
+
+## The model
+
+Everything you see maps to a small set of public artifacts:
+
+- **AgentPaymentManifest**  
+  What should be paid
+
+- **PolicyGrant**  
+  What is allowed
+
+- **ExecutionRun**  
+  What happens during execution
+
+- **ExecutionEventEnvelope**  
+  What is observable
+
+- **SettlementProof**  
+  What is verifiable
+
+- **DiscrepancyRecord**  
+  What happens when it doesn’t close
+
+> If you understand these, you understand Agentisfy.
+
+---
+
+## API (public gateway)
+
+```
+GET  /v1/agent/manifest/:invoiceId
+POST /v1/agent/simulate
+POST /v1/agent/execute
+GET  /v1/agent/events
+GET  /v1/agent/proof/:invoiceId
+GET  /v1/agent/discrepancies
+POST /v1/agent/attempts/:attemptId/replay
+```
+
+OpenAPI: `docs/public-openapi.yaml`
+
+---
+
+## Schemas
+
+```
+schemas/
+  agent-payment-manifest
+  policy-grant
+  execution-run
+  execution-event-envelope
+  payment-event-envelope
+  settlement-proof
+  discrepancy-record
+  decision-trace
+```
+
+---
+
+## Architecture boundary
+
+This repo shows **public consequences** only.
+
+**Private (not here):**
+- policy authoring & evaluation
+- routing & waiver/fallback decisions
+- risk scoring & approvals
+- reconciliation & accounting truth
+- merchant/operator systems
+
+**Rule:**
+- Public = outcomes you can observe and verify  
+- Private = decisions that produce those outcomes
+
+---
+
+## Repo structure
+
+```
+src/
+  App.tsx        # end-to-end demo flow
+  lib/api.ts     # gateway client
+  lib/demo.ts    # demo data & helpers
+schemas/         # public contracts
+docs/            # OpenAPI + boundary docs
+```
+
+---
+
+## When things go wrong
+
+- **Execution fails** → invalid/expired preflight token  
+- **No events** → check gateway URL / stream endpoint  
+- **No proof** → outcome not finalized yet  
+- **Need to change policy** → belongs in private repo
+
+---
+
+## Design goals
+
+- Minimal surface area
+- Zero hidden behavior
+- Deterministic outcomes
+- Verifiable state
+- No drift from private source of truth
+
+---
+
+## What “good” looks like
+
+After one session, you should be able to answer:
+
+- How do I represent a payment?  
+- What constrains agent authority?  
+- What path will execution take?  
+- How do I verify the outcome?  
+- What happens on failure?
+
+If yes → this repo did its job.
+
+---
+
+## Summary
+
+Stable is the rail.  
+Agentisfy is the execution layer.
+
+This repo shows how to use it:
+
+**Manifest → Simulate → Execute → Verify**
