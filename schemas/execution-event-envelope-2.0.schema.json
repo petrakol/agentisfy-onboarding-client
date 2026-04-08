@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpandtrade.dev/schemas/execution-event-envelope-2.0.schema.json",
+  "title": "ExecutionEventEnvelopeV2",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "occurredAt",
+    "environment",
+    "runId",
+    "actorKind",
+    "sourceKind",
+    "correlationIds",
+    "sequenceNo",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1 },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "manifest.compiled",
+        "run.started",
+        "payment.attempt.recorded",
+        "waiver.accepted",
+        "waiver.rejected",
+        "waiver.broadcasted",
+        "waiver.stream_parse_failed",
+        "proof.issued",
+        "discrepancy.opened",
+        "discrepancy.updated",
+        "invoice.projected",
+        "webhook.received"
+      ]
+    },
+    "eventVersion": { "const": "2.0" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "environment": { "type": "string", "enum": ["sandbox", "testnet", "mainnet"] },
+    "runId": { "type": "string", "minLength": 1 },
+    "manifestId": { "type": "string" },
+    "grantId": { "type": "string" },
+    "invoiceId": { "type": "string" },
+    "paymentAttemptId": { "type": "string" },
+    "waiverSubmissionId": { "type": "string" },
+    "txHash": { "type": "string" },
+    "proofId": { "type": "string" },
+    "discrepancyId": { "type": "string" },
+    "actorKind": { "type": "string", "enum": ["customer", "operator", "system", "agent"] },
+    "actorId": { "type": "string" },
+    "sourceKind": { "type": "string", "enum": ["checkout", "console", "ops", "worker", "webhook"] },
+    "correlationIds": {
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "traceId": { "type": "string" },
+        "parentEventId": { "type": "string" },
+        "externalId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "sequenceNo": { "type": "integer", "minimum": 0 },
+    "payload": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": false
+}

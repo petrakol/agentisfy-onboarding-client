@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/PolicyGrant-1.0.json",
+  "title": "PolicyGrant",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "grantId",
+    "grantVersion",
+    "principalType",
+    "principalId",
+    "delegateType",
+    "delegateId",
+    "environment",
+    "merchantScope",
+    "payeeScope",
+    "targetScope",
+    "selectorScope",
+    "asset",
+    "maxAmount",
+    "notBefore",
+    "notAfter",
+    "approvalState",
+    "revocationState",
+    "riskTier"
+  ],
+  "properties": {
+    "grantId": { "type": "string", "minLength": 1 },
+    "grantVersion": { "const": "1.0" },
+    "principalType": { "type": "string", "enum": ["merchant", "organization", "user", "system"] },
+    "principalId": { "type": "string", "minLength": 1 },
+    "delegateType": { "type": "string", "enum": ["agent", "operator", "service"] },
+    "delegateId": { "type": "string", "minLength": 1 },
+    "environment": { "type": "string", "enum": ["sandbox", "testnet", "mainnet"] },
+    "merchantScope": { "type": "array", "items": { "type": "string" } },
+    "payeeScope": { "type": "array", "items": { "type": "string" } },
+    "targetScope": { "type": "array", "items": { "type": "string" } },
+    "selectorScope": { "type": "array", "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" } },
+    "asset": {
+      "type": "object",
+      "required": ["tokenAddress"],
+      "properties": {
+        "symbol": { "type": "string" },
+        "tokenAddress": { "type": "string" },
+        "chainId": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "maxAmount": {
+      "type": "object",
+      "required": ["atomic"],
+      "properties": { "atomic": { "type": "string", "pattern": "^[0-9]+$" } },
+      "additionalProperties": false
+    },
+    "notBefore": { "type": "string", "format": "date-time" },
+    "notAfter": { "type": "string", "format": "date-time" },
+    "approvalState": { "type": "string", "enum": ["draft", "approved", "published"] },
+    "revocationState": { "type": "string", "enum": ["active", "revoked", "expired"] },
+    "approvalEvidenceRef": { "type": "string" },
+    "riskTier": { "type": "string", "enum": ["low", "medium", "high"] }
+  }
+}

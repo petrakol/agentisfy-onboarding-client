@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Agentisfy Public Gateway
+  version: 0.1.0
+servers:
+  - url: https://gateway.agentisfy.example
+paths:
+  /v1/agent/manifest/{invoiceId}:
+    get:
+      summary: Fetch canonical AgentPaymentManifest for an invoice
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Manifest
+  /v1/agent/simulate:
+    post:
+      summary: Predict path and budget using manifest + published grant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [manifest, grant]
+      responses:
+        '200':
+          description: Simulation result
+  /v1/agent/execute:
+    post:
+      summary: Execute using manifest + published grant + preflight token from private gateway
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [manifest, grant, idempotencyKey, preflightToken]
+      responses:
+        '202':
+          description: Accepted
+  /v1/agent/attempts/{attemptId}/replay:
+    post:
+      summary: Replay a prior attempt safely
+      parameters:
+        - in: path
+          name: attemptId
+          required: true
+          schema: { type: string }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Replay result
+  /v1/agent/proof/{invoiceId}:
+    get:
+      summary: Fetch SettlementProof by invoice
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Settlement proof
+  /v1/agent/events:
+    get:
+      summary: Stream execution events via SSE
+      parameters:
+        - in: query
+          name: attemptId
+          required: false
+          schema: { type: string }
+        - in: query
+          name: cursor
+          required: false
+          schema: { type: integer }
+      responses:
+        '200':
+          description: text/event-stream
+  /v1/agent/discrepancies:
+    get:
+      summary: Read discrepancy records and machine decisions
+      responses:
+        '200':
+          description: Discrepancy list

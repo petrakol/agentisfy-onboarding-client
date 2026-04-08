@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpandtrade.dev/schemas/payment-event-envelope-1.0.schema.json",
+  "title": "PaymentEventEnvelope",
+  "type": "object",
+  "required": ["version", "eventId", "eventType", "occurredAt", "environment", "correlationIds", "actor", "resource", "source", "payload"],
+  "properties": {
+    "version": { "const": "1.0" },
+    "eventId": { "type": "string", "minLength": 1 },
+    "eventType": {
+      "type": "string",
+      "enum": ["invoice.created", "invoice.updated", "payment.attempted", "waiver.submitted", "webhook.received", "reconciliation.mismatch"]
+    },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "environment": { "type": "string", "enum": ["sandbox", "testnet", "mainnet"] },
+    "correlationIds": {
+      "type": "object",
+      "required": ["invoiceId"],
+      "properties": {
+        "invoiceId": { "type": "string" },
+        "attemptId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "traceId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["customer", "operator", "system", "agent"] },
+        "id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "resource": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["invoice", "attempt", "waiver", "webhook", "reconciliation"] },
+        "id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["surface", "service"],
+      "properties": {
+        "surface": { "type": "string", "enum": ["checkout", "merchant-dashboard", "ops-console", "watcher", "waiver-proxy"] },
+        "service": { "type": "string" },
+        "host": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "payload": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": false
+}

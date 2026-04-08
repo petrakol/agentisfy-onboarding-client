@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/DiscrepancyRecord-1.0.json",
+  "title": "DiscrepancyRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["discrepancyId", "schemaVersion", "runId", "kind", "severity", "openedAt", "ownerQueue", "suspectedImpact", "closureRequirements"],
+  "properties": {
+    "discrepancyId": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "runId": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["timeout", "unknown_outcome", "mismatch", "duplicate_risk", "missing_proof"] },
+    "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "openedAt": { "type": "string", "format": "date-time" },
+    "ownerQueue": { "type": "string", "enum": ["ops", "risk", "engineering"] },
+    "suspectedImpact": { "type": "string" },
+    "closureRequirements": { "type": "array", "items": { "type": "string" } },
+    "resolvedAt": { "type": "string", "format": "date-time" },
+    "resolutionEvidence": {
+      "type": "object",
+      "properties": {
+        "resolver": { "type": "string" },
+        "summary": { "type": "string" },
+        "refs": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["resolver", "summary", "refs"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/DecisionTrace-1.0.json",
+  "title": "DecisionTrace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["traceId", "schemaVersion", "runId", "inputsHash", "matchedGrantIds", "rulesEvaluated", "decision", "reasonCodes", "routeChoice", "operatorInterventions"],
+  "properties": {
+    "traceId": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "runId": { "type": "string", "minLength": 1 },
+    "inputsHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "matchedGrantIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "rulesEvaluated": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "result", "detail"],
+        "properties": {
+          "ruleId": { "type": "string", "minLength": 1 },
+          "result": { "type": "string", "enum": ["pass", "fail", "review"] },
+          "detail": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "decision": { "type": "string", "enum": ["authorized", "denied", "manual_review"] },
+    "reasonCodes": { "type": "array", "items": { "type": "string" } },
+    "routeChoice": { "type": "string", "enum": ["waiver", "fallback", "manual", "blocked"] },
+    "fallbackReason": { "type": "string" },
+    "operatorInterventions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actor", "action", "at"],
+        "properties": {
+          "actor": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "minLength": 1 },
+          "at": { "type": "string", "format": "date-time" },
+          "evidenceRef": { "type": "string" }
+        }
+      }
+    }
+  }
+}

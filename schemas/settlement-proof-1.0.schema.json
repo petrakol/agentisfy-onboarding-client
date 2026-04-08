@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/SettlementProof-1.0.json",
+  "title": "SettlementProof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proofId", "schemaVersion", "runId", "runVersion", "manifestHash", "grantRef", "route", "attemptRef", "txHash", "chainId", "blockNumber", "receiptStatus", "logRefs", "verifiedFinalAt", "issuedAt", "environment"],
+  "properties": {
+    "proofId": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "runId": { "type": "string", "minLength": 1 },
+    "runVersion": { "const": "1.0" },
+    "manifestHash": { "type": "string", "minLength": 1 },
+    "grantRef": { "type": "string", "minLength": 1 },
+    "route": { "type": "string", "enum": ["waiver", "fallback", "manual"] },
+    "attemptRef": { "type": "string", "minLength": 1 },
+    "txHash": { "type": "string", "minLength": 1 },
+    "chainId": { "type": "integer", "minimum": 0 },
+    "blockNumber": { "type": "integer", "minimum": 0 },
+    "receiptStatus": { "type": "string", "enum": ["success", "reverted", "unknown"] },
+    "logRefs": { "type": "array", "items": { "type": "string" } },
+    "verifiedFinalAt": { "type": "string", "format": "date-time" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "environment": { "type": "string", "enum": ["sandbox", "testnet", "mainnet"] }
+  }
+}

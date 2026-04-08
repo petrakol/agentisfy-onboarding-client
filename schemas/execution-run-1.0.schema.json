@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/ExecutionRun-1.0.json",
+  "title": "ExecutionRun",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runId", "runVersion", "manifestId", "status", "route", "executionKey", "attemptCount", "openedAt"],
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "runVersion": { "const": "1.0" },
+    "manifestId": { "type": "string", "minLength": 1 },
+    "grantId": { "type": "string" },
+    "grantVersion": { "type": "string" },
+    "status": { "type": "string", "enum": ["received", "authorized", "submitting", "submitted", "verifying", "settled", "failed", "ambiguous", "cancelled"] },
+    "route": { "type": "string", "enum": ["waiver", "fallback", "manual"] },
+    "executionKey": { "type": "string", "minLength": 1 },
+    "attemptCount": { "type": "integer", "minimum": 0 },
+    "activeAttemptId": { "type": "string" },
+    "finalAttemptId": { "type": "string" },
+    "finalTxHash": { "type": "string" },
+    "proofId": { "type": "string" },
+    "lastVerifiedAt": { "type": "string", "format": "date-time" },
+    "ambiguityState": { "type": "string", "enum": ["none", "pending", "resolved"] },
+    "openedAt": { "type": "string", "format": "date-time" },
+    "closedAt": { "type": "string", "format": "date-time" }
+  }
+}

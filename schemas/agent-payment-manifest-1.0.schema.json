@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.xpandtrade.com/control-plane/AgentPaymentManifest-1.0.json",
+  "title": "AgentPaymentManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestId",
+    "schemaVersion",
+    "manifestHash",
+    "origin",
+    "invoiceRef",
+    "merchantRef",
+    "payer",
+    "payee",
+    "asset",
+    "amount",
+    "target",
+    "selector",
+    "calldataHash",
+    "idempotencyKey",
+    "expiresAt",
+    "fallbackPolicy",
+    "proofRequirement",
+    "metadata"
+  ],
+  "properties": {
+    "manifestId": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "manifestHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "origin": { "type": "string", "enum": ["checkout", "api", "agent", "replay"] },
+    "invoiceRef": { "type": "string", "minLength": 1 },
+    "merchantRef": { "type": "string", "minLength": 1 },
+    "payer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accountRef"],
+      "properties": {
+        "accountRef": { "type": "string", "minLength": 1 },
+        "chainId": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "payee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accountRef"],
+      "properties": {
+        "accountRef": { "type": "string", "minLength": 1 },
+        "chainId": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "tokenAddress", "chainId", "decimals"],
+      "properties": {
+        "symbol": { "type": "string", "minLength": 1 },
+        "tokenAddress": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+        "chainId": { "type": "integer", "minimum": 1 },
+        "decimals": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "amount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atomic"],
+      "properties": {
+        "atomic": { "type": "string", "pattern": "^[0-9]+$" },
+        "display": { "type": "string", "minLength": 1 }
+      }
+    },
+    "target": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+    "selector": { "type": "string", "pattern": "^0x[a-fA-F0-9]{8}$" },
+    "calldataHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "fallbackPolicy": { "type": "string", "enum": ["deny", "allow_direct_submit", "allow_manual_recovery"] },
+    "proofRequirement": { "type": "string", "enum": ["none", "tx_receipt", "settlement_proof"] },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    }
+  }
+}
